@@ -55,7 +55,8 @@ function formatLabel(slug: string) {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const config = parseSlug(params.seo);
+  const { seo } = await params;
+  const config = parseSlug(seo);
   if (!config) return { title: "Not Found" };
 
   const toolName = config.tool ? AI_TOOLS.find((t) => t.slug === config.tool)?.name || config.tool : "";
@@ -139,7 +140,8 @@ function generateFaqs(config: PageConfig): Array<{ q: string; a: string }> {
 }
 
 export default async function ProgrammaticSeoPage({ params }: PageProps) {
-  const config = parseSlug(params.seo);
+  const { seo } = await params;
+  const config = parseSlug(seo);
   if (!config) notFound();
 
   const results    = await getPrompts(config);

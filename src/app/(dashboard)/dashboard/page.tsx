@@ -1,6 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { db, users, prompts, purchases } from "@/lib/db";
+import { db, prompts, purchases } from "@/lib/db";
+import { getOrCreateDbUser } from "@/lib/auth/getOrCreateUser";
 import { eq, and, sum, count, desc } from "drizzle-orm";
 import { DollarSign, TrendingUp, Eye, Package, Star, ArrowUpRight } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
@@ -46,12 +46,9 @@ async function getSellerStats(userId: string) {
 }
 
 export default async function DashboardPage() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) redirect("/login");
-
-  const user = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
+  const user = await getOrCreateDbUser();
   if (!user) redirect("/login");
-  if (user.role === "buyer") redirect("/marketplace");
+  if (user.role === "buyer") redirect("/become-seller");
 
   const stats = await getSellerStats(user.id);
 

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { db, prompts, users, purchases, userLibrary } from "@/lib/db";
+import { db, prompts, purchases, userLibrary } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { createCheckoutSession, calcFees } from "@/lib/payments/stripe";
 import { createRazorpayOrder } from "@/lib/payments/razorpay";
+import { getOrCreateDbUser } from "@/lib/auth/getOrCreateUser";
 
 const purchaseSchema = z.object({
   promptId: z.string().uuid(),
@@ -12,11 +12,8 @@ const purchaseSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const buyer = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
-  if (!buyer) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  const buyer = await getOrCreateDbUser();
+  if (!buyer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
   const parsed = purchaseSchema.safeParse(body);
@@ -74,11 +71,8 @@ export async function POST(req: NextRequest) {
 
 // GET /api/v1/purchases — buyer's library check
 export async function GET(req: NextRequest) {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const buyer = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
-  if (!buyer) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  const buyer = await getOrCreateDbUser();
+  if (!buyer) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const library = await db.query.userLibrary.findMany({
     where: eq(userLibrary.userId, buyer.id),

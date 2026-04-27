@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { Search, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { Search } from "lucide-react";
 import { db, prompts, categories, aiTools } from "@/lib/db";
+import { SortSelect } from "@/components/marketplace/SortSelect";
 import { eq, and, gte, lte, desc, asc, ilike, sql } from "drizzle-orm";
 import { PromptCard } from "@/components/prompts/PromptCard";
 import { Badge } from "@/components/ui/badge";
@@ -19,13 +20,6 @@ export const metadata: Metadata = {
 
 export const revalidate = 300;
 
-const SORT_OPTIONS = [
-  { value: "newest",    label: "Newest" },
-  { value: "popular",  label: "Most Popular" },
-  { value: "top-rated",label: "Top Rated" },
-  { value: "price-asc",label: "Price: Low → High" },
-  { value: "price-desc",label: "Price: High → Low" },
-];
 
 const CATEGORIES_FILTER = [
   { name: "All",          slug: "" },
@@ -254,23 +248,9 @@ export default async function MarketplacePage({ searchParams }: PageProps) {
 
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-sm text-zinc-500 hidden sm:block">Sort:</span>
-                  <div className="relative">
-                    <select
-                      defaultValue={params.sort || "newest"}
-                      onChange={(e) => {
-                        const url = new URL(window.location.href);
-                        url.searchParams.set("sort", e.target.value);
-                        url.searchParams.set("page", "1");
-                        window.location.href = url.toString();
-                      }}
-                      className="appearance-none h-9 pl-3 pr-8 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-zinc-100"
-                    >
-                      {SORT_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
-                  </div>
+                  <Suspense>
+                    <SortSelect current={params.sort} />
+                  </Suspense>
                 </div>
               </div>
 

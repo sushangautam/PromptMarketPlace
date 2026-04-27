@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import { Upload, DollarSign, Tag, FileText, Eye, ChevronDown, PartyPopper } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { Upload, DollarSign, Tag, FileText, Eye, ChevronDown, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 const CATEGORIES = [
   "Marketing", "Coding", "Design", "Writing", "Business",
@@ -24,11 +24,10 @@ const TAGS_SUGGESTIONS = [
   "debugging", "code review", "documentation", "UX", "branding",
 ];
 
-function NewPromptForm() {
+function EditPromptForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isWelcome = searchParams.get("welcome") === "1";
-  const { user } = useUser();
+  const params = useParams();
+  const id = params.id as string;
 
   const [form, setForm] = useState({
     title: "",
@@ -42,7 +41,34 @@ function NewPromptForm() {
   });
   const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch(`/api/v1/prompts/${id}/data`);
+        if (!res.ok) throw new Error("Failed to load prompt");
+        const data = await res.json();
+        setForm({
+          title: data.title || "",
+          description: data.description || "",
+          promptText: data.promptText || "",
+          price: data.price?.toString() || "0",
+          category: data.category?.name || "",
+          aiTool: data.aiTool?.name || "",
+          tags: data.tags || [],
+          tagInput: "",
+        });
+      } catch {
+        setError("Failed to load prompt data.");
+      } finally {
+        setFetching(false);
+      }
+    }
+    load();
+  }, [id]);
 
   const set = (k: string, v: unknown) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -59,6 +85,7 @@ function NewPromptForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess(false);
 
     if (!form.title || !form.promptText || !form.category) {
       setError("Title, prompt text, and category are required.");
@@ -67,8 +94,8 @@ function NewPromptForm() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/prompts", {
-        method: "POST",
+      const res = await fetch(`/api/v1/prompts/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: form.title,
@@ -83,11 +110,11 @@ function NewPromptForm() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create prompt");
+        throw new Error(data.error || "Failed to update prompt");
       }
 
-      const { slug } = await res.json();
-      router.push(`/dashboard/prompts?created=${slug}`);
+      setSuccess(true);
+      setTimeout(() => router.push("/dashboard/prompts"), 1200);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -95,33 +122,34 @@ function NewPromptForm() {
     }
   }
 
+  if (fetching) {
+    return (
+      <div className="container mx-auto px-4 py-10 max-w-4xl animate-pulse space-y-4">
+        <div className="h-8 w-48 bg-zinc-200 dark:bg-zinc-800 rounded" />
+        <div className="h-64 bg-zinc-100 dark:bg-zinc-800 rounded-xl" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-10 max-w-4xl">
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Upload Prompt</h1>
-          <p className="text-zinc-500 mt-1">Fill in the details to list your prompt for sale</p>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/prompts">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Edit Prompt</h1>
+            <p className="text-zinc-500 mt-1">Update your prompt details</p>
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setPreview(!preview)}
-          className="gap-2"
-        >
+        <Button variant="ghost" size="sm" onClick={() => setPreview(!preview)} className="gap-2">
           <Eye className="h-4 w-4" />
           {preview ? "Edit" : "Preview"}
         </Button>
       </div>
-
-      {isWelcome && (
-        <div className="mb-6 p-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 flex items-center gap-3">
-          <PartyPopper className="h-5 w-5 text-emerald-600 shrink-0" />
-          <div>
-            <p className="font-semibold text-emerald-900 dark:text-emerald-300">You&apos;re now a seller!</p>
-            <p className="text-sm text-emerald-700 dark:text-emerald-400">Upload your first prompt below to start earning.</p>
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="mb-6 p-4 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 text-sm text-red-600 dark:text-red-400">
@@ -129,9 +157,14 @@ function NewPromptForm() {
         </div>
       )}
 
+      {success && (
+        <div className="mb-6 p-4 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+          Prompt updated! Redirecting…
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main fields */}
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardBody className="space-y-5">
@@ -160,7 +193,7 @@ function NewPromptForm() {
                   <textarea
                     value={form.description}
                     onChange={(e) => set("description", e.target.value)}
-                    placeholder="Describe what this prompt does, its use cases, and what makes it special…"
+                    placeholder="Describe what this prompt does…"
                     rows={4}
                     maxLength={1000}
                     className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-zinc-100 resize-none"
@@ -175,36 +208,26 @@ function NewPromptForm() {
                   <textarea
                     value={form.promptText}
                     onChange={(e) => set("promptText", e.target.value)}
-                    placeholder="Paste your full prompt here. Buyers will only see this after purchase…"
+                    placeholder="Paste your full prompt here…"
                     rows={10}
                     className="w-full rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 text-sm font-mono placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-zinc-100 resize-y"
                   />
-                  <p className="mt-1 text-xs text-zinc-400">
-                    {form.promptText.length} characters — buyers see this only after purchase
-                  </p>
+                  <p className="mt-1 text-xs text-zinc-400">{form.promptText.length} characters</p>
                 </div>
               </CardBody>
             </Card>
 
-            {/* Tags */}
             <Card>
               <CardBody className="space-y-4">
                 <h2 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
                   <Tag className="h-4 w-4 text-violet-600" />
                   Tags
                 </h2>
-
                 <div className="flex flex-wrap gap-2 min-h-[40px]">
                   {form.tags.map((tag) => (
                     <Badge key={tag} variant="secondary" className="gap-1.5">
                       {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="text-zinc-400 hover:text-zinc-600 leading-none"
-                      >
-                        ×
-                      </button>
+                      <button type="button" onClick={() => removeTag(tag)} className="text-zinc-400 hover:text-zinc-600 leading-none">×</button>
                     </Badge>
                   ))}
                   {form.tags.length < 10 && (
@@ -212,17 +235,13 @@ function NewPromptForm() {
                       value={form.tagInput}
                       onChange={(e) => set("tagInput", e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === ",") {
-                          e.preventDefault();
-                          addTag(form.tagInput);
-                        }
+                        if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(form.tagInput); }
                       }}
                       placeholder="Add tag, press Enter…"
                       className="h-7 w-36 text-xs"
                     />
                   )}
                 </div>
-
                 <div className="flex flex-wrap gap-1.5">
                   {TAGS_SUGGESTIONS.filter((t) => !form.tags.includes(t)).slice(0, 8).map((tag) => (
                     <button
@@ -239,7 +258,6 @@ function NewPromptForm() {
             </Card>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <Card>
               <CardBody className="space-y-5">
@@ -249,9 +267,7 @@ function NewPromptForm() {
                 </h2>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                    Price (USD)
-                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Price (USD)</label>
                   <Input
                     type="number"
                     min="0"
@@ -281,18 +297,14 @@ function NewPromptForm() {
                       className="w-full appearance-none h-10 pl-3 pr-8 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-zinc-100"
                     >
                       <option value="">Select category…</option>
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
+                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                    AI Tool
-                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">AI Tool</label>
                   <div className="relative">
                     <select
                       value={form.aiTool}
@@ -300,9 +312,7 @@ function NewPromptForm() {
                       className="w-full appearance-none h-10 pl-3 pr-8 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 dark:text-zinc-100"
                     >
                       <option value="">Select AI tool…</option>
-                      {AI_TOOLS.map((t) => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
+                      {AI_TOOLS.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
                   </div>
@@ -310,7 +320,6 @@ function NewPromptForm() {
               </CardBody>
             </Card>
 
-            {/* Checklist */}
             <Card>
               <CardBody>
                 <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3">Quality Checklist</h3>
@@ -333,15 +342,9 @@ function NewPromptForm() {
               </CardBody>
             </Card>
 
-            <Button
-              type="submit"
-              variant="gradient"
-              size="lg"
-              className="w-full"
-              isLoading={loading}
-            >
+            <Button type="submit" variant="gradient" size="lg" className="w-full" isLoading={loading}>
               <Upload className="h-5 w-5" />
-              {loading ? "Publishing…" : "Publish Prompt"}
+              {loading ? "Saving…" : "Save Changes"}
             </Button>
           </div>
         </div>
@@ -350,10 +353,10 @@ function NewPromptForm() {
   );
 }
 
-export default function NewPromptPage() {
+export default function EditPromptPage() {
   return (
     <Suspense fallback={<div className="container mx-auto px-4 py-10 max-w-4xl animate-pulse"><div className="h-8 w-48 bg-zinc-200 dark:bg-zinc-800 rounded mb-6" /></div>}>
-      <NewPromptForm />
+      <EditPromptForm />
     </Suspense>
   );
 }

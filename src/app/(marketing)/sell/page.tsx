@@ -54,7 +54,7 @@ export default function SellPage() {
                 Join 5,000+ creators who earn money from their AI expertise. Upload once, sell forever. Global payments via Stripe & Razorpay.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link href="/signup">
+                <Link href="/become-seller">
                   <Button size="xl" variant="gradient" className="w-full sm:w-auto">
                     Start Selling Free
                     <ArrowRight className="h-5 w-5" />
@@ -165,7 +165,7 @@ export default function SellPage() {
             <p className="text-violet-100 text-lg mb-8 max-w-xl mx-auto">
               Free to join. No monthly fees. Upload your first prompt in 5 minutes.
             </p>
-            <Link href="/signup">
+            <Link href="/become-seller">
               <Button size="xl" className="bg-white text-violet-700 hover:bg-violet-50">
                 Create Your Free Account
                 <ArrowRight className="h-5 w-5" />

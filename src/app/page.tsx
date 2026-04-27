@@ -113,13 +113,11 @@ export default async function HomePage() {
               { value: "50K+", label: "Buyers" },
               { value: "4.8★", label: "Avg Rating" },
             ].map((stat, i) => (
-              <>
-                <div key={stat.label} className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-zinc-900 dark:text-white">{stat.value}</span>
-                  {" "}{stat.label}
-                </div>
-                {i < 3 && <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-800" />}
-              </>
+              <div key={stat.label} className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-zinc-900 dark:text-white">{stat.value}</span>
+                {" "}{stat.label}
+                {i < 3 && <div className="ml-8 w-px h-8 bg-zinc-200 dark:bg-zinc-800" />}
+              </div>
             ))}
           </div>
         </div>
@@ -250,7 +248,7 @@ export default async function HomePage() {
             <p className="text-violet-100 text-lg mb-8 max-w-xl mx-auto">
               Join 5,000+ creators earning passive income. Upload in 5 minutes, earn forever.
             </p>
-            <Link href="/signup">
+            <Link href="/become-seller">
               <Button size="xl" className="bg-white text-violet-700 hover:bg-violet-50">
                 Create Your Store Free
                 <ArrowRight className="h-5 w-5" />

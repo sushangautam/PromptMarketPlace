@@ -1,6 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { db, users, purchases } from "@/lib/db";
+import { db, purchases } from "@/lib/db";
+import { getOrCreateDbUser } from "@/lib/auth/getOrCreateUser";
 import { eq, and, desc, sum, count } from "drizzle-orm";
 import { DollarSign, ArrowUpRight, Clock, CheckCircle, ExternalLink } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
@@ -32,11 +32,9 @@ async function getEarnings(userId: string) {
 }
 
 export default async function EarningsPage() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) redirect("/login");
-
-  const user = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
-  if (!user || user.role === "buyer") redirect("/marketplace");
+  const user = await getOrCreateDbUser();
+  if (!user) redirect("/login");
+  if (user.role === "buyer") redirect("/become-seller");
 
   const { totalEarned, totalSales, recent } = await getEarnings(user.id);
 

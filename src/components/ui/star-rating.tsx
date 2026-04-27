@@ -2,16 +2,17 @@ import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function StarRating({
-  rating,
+  rating: ratingProp,
   count,
   size = "sm",
   className,
 }: {
-  rating: number;
+  rating: number | string;
   count?: number;
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
+  const rating = Number(ratingProp ?? 0);
   const sizes = { sm: "h-3.5 w-3.5", md: "h-4 w-4", lg: "h-5 w-5" };
   const textSizes = { sm: "text-xs", md: "text-sm", lg: "text-base" };
 

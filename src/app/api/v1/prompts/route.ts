@@ -1,24 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import { db, prompts, users, categories, aiTools } from "@/lib/db";
+import { db, prompts, categories, aiTools } from "@/lib/db";
+import { getOrCreateDbUser } from "@/lib/auth/getOrCreateUser";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import slugify from "slugify";
 import { indexPrompt } from "@/lib/search/meilisearch";
 
 const createPromptSchema = z.object({
-  title:          z.string().min(10).max(100),
-  description:    z.string().min(50).max(2000),
-  promptText:     z.string().min(10),
-  previewText:    z.string().max(500).optional(),
-  exampleOutput:  z.string().optional(),
-  categoryId:     z.string().uuid().optional(),
-  aiToolId:       z.string().uuid().optional(),
-  tags:           z.array(z.string()).max(10).default([]),
-  price:          z.number().min(0).max(999),
-  metaTitle:      z.string().max(60).optional(),
+  title:           z.string().min(10).max(120),
+  description:     z.string().min(20).max(2000),
+  promptText:      z.string().min(10),
+  previewText:     z.string().max(500).optional(),
+  exampleOutput:   z.string().optional(),
+  categoryId:      z.string().uuid().optional(),
+  categorySlug:    z.string().optional(),   // form sends this
+  aiToolId:        z.string().uuid().optional(),
+  aiToolSlug:      z.string().optional(),   // form sends this
+  tags:            z.array(z.string()).max(10).default([]),
+  price:           z.number().min(0).max(999),
+  metaTitle:       z.string().max(60).optional(),
   metaDescription: z.string().max(160).optional(),
-  faqs:           z.array(z.object({ q: z.string(), a: z.string() })).default([]),
+  faqs:            z.array(z.object({ q: z.string(), a: z.string() })).default([]),
 });
 
 export async function GET(req: NextRequest) {
@@ -71,11 +73,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const seller = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
-  if (!seller) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  const seller = await getOrCreateDbUser();
+  if (!seller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (seller.role === "buyer") return NextResponse.json({ error: "Become a seller first" }, { status: 403 });
 
   const body = await req.json();
@@ -86,6 +85,18 @@ export async function POST(req: NextRequest) {
   const baseSlug = slugify(data.title, { lower: true, strict: true });
   const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
+  // Resolve slugs → IDs if the client sent slugs instead of UUIDs
+  let categoryId = data.categoryId;
+  if (!categoryId && data.categorySlug) {
+    const cat = await db.query.categories.findFirst({ where: eq(categories.slug, data.categorySlug) });
+    categoryId = cat?.id;
+  }
+  let aiToolId = data.aiToolId;
+  if (!aiToolId && data.aiToolSlug) {
+    const tool = await db.query.aiTools.findFirst({ where: eq(aiTools.slug, data.aiToolSlug) });
+    aiToolId = tool?.id;
+  }
+
   const [prompt] = await db.insert(prompts).values({
     sellerId:       seller.id,
     title:          data.title,
@@ -94,8 +105,8 @@ export async function POST(req: NextRequest) {
     promptText:     data.promptText,
     previewText:    data.previewText,
     exampleOutput:  data.exampleOutput,
-    categoryId:     data.categoryId,
-    aiToolId:       data.aiToolId,
+    categoryId,
+    aiToolId,
     tags:           data.tags,
     price:          data.price.toString(),
     metaTitle:      data.metaTitle,

@@ -1,8 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { db, users, prompts } from "@/lib/db";
+import { db, prompts } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
+import { getOrCreateDbUser } from "@/lib/auth/getOrCreateUser";
 import { Plus, Eye, ShoppingCart, Star, Edit, Trash2, Package } from "lucide-react";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,11 +12,9 @@ import { formatPrice } from "@/lib/utils";
 export const metadata = { title: "My Prompts – Dashboard" };
 
 export default async function SellerPromptsPage() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) redirect("/login");
-
-  const user = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
-  if (!user || user.role === "buyer") redirect("/marketplace");
+  const user = await getOrCreateDbUser();
+  if (!user) redirect("/login");
+  if (user.role === "buyer") redirect("/become-seller");
 
   const myPrompts = await db.query.prompts.findMany({
     where: eq(prompts.sellerId, user.id),

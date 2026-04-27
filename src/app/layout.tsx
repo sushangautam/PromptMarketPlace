@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SEO_CONFIG } from "@/config/seo";
+import { NavbarAuth } from "@/components/layout/NavbarAuth";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body className={`${inter.className} bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased`}>
+        <body suppressHydrationWarning className={`${inter.className} bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased`}>
           <Navbar />
           <main className="pt-16">{children}</main>
           <Footer />
@@ -55,10 +56,7 @@ function Navbar() {
           <a href="/marketplace" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Browse</a>
           <a href="/sell" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Sell</a>
           <a href="/blog" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Blog</a>
-          <a href="/login" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Login</a>
-          <a href="/signup" className="inline-flex items-center h-9 px-4 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors">
-            Get Started
-          </a>
+          <NavbarAuth />
         </div>
       </div>
     </nav>
