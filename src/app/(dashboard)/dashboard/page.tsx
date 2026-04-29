@@ -16,11 +16,15 @@ async function getSellerStats(userId: string) {
     db.select({ total: sum(purchases.sellerPayout) })
       .from(purchases)
       .where(and(
+        eq(purchases.sellerId, userId),
         eq(purchases.status, "completed"),
       )),
     db.select({ total: count() })
       .from(purchases)
-      .where(eq(purchases.status, "completed")),
+      .where(and(
+        eq(purchases.sellerId, userId),
+        eq(purchases.status, "completed"),
+      )),
     db.select({ total: sum(prompts.viewCount) })
       .from(prompts)
       .where(eq(prompts.sellerId, userId)),
