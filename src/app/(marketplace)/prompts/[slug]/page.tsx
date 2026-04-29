@@ -13,7 +13,8 @@ import { PromptCard } from "@/components/prompts/PromptCard";
 import { PurchaseButton } from "@/components/payments/PurchaseButton";
 import { buildPromptMetadata, buildPromptJsonLd, buildFaqJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo/metadata";
 import { SEO_CONFIG } from "@/config/seo";
-import { ShieldCheck, Zap, Eye, Copy, ChevronDown } from "lucide-react";
+import { ShieldCheck, Zap, Eye, ChevronDown } from "lucide-react";
+import { CopyButton } from "@/components/prompts/CopyButton";
 import type { Prompt } from "@/types";
 
 interface PageProps {
@@ -153,9 +154,7 @@ export default async function PromptDetailPage({ params }: PageProps) {
                   {hasPurchased || isFree ? "Full Prompt" : "Prompt Preview"}
                 </span>
                 {(hasPurchased || isFree) && (
-                  <Button variant="ghost" size="sm" className="gap-1.5">
-                    <Copy className="h-4 w-4" /> Copy
-                  </Button>
+                  <CopyButton text={prompt.promptText} />
                 )}
               </div>
               <div className="p-5 font-mono text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed relative">
